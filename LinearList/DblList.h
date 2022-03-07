@@ -41,9 +41,9 @@ public:
     int Length() const {
         int len = 0;
         DblNode<T> *cur = first->rLink;
-        while (cur != first) {
+        while (cur != first){
+            ++len;
             cur = cur->rLink;
-            len++;
         }
         return len;
     }
@@ -72,10 +72,10 @@ public:
     }
 
     DblNode<T> *Locate(int i, int d) {
-        if(IsEmpty() || i == 0) //如果找0结点或者链表为空
+        if(IsEmpty() || i == -1) //如果找-1结点或者链表为空
             return first;
-        if (d == 0) { //从前到后，下标从1开始
-            int index = 1;
+        if (d == 0) { //从前到后，下标从0开始
+            int index = 0;
             DblNode<T> *cur = first->rLink;
             while (cur != first) {
                 if (i == index) {
@@ -86,7 +86,7 @@ public:
             }
             return nullptr;
         } else {
-            int index = 1;
+            int index = 0;
             DblNode<T> *cur = first->lLink;
             while (cur != first) {
                 if (i == index) {
@@ -105,7 +105,7 @@ public:
         if (cur == nullptr)
             return false;
         DblNode<T> *pre;
-        DblNode<T> *newnode = new DblNode<T>(x);
+        auto *newnode = new DblNode<T>(x);
         if (d == 0) { //从前到后，插到cur的左边
             pre = cur->lLink;
             newnode->rLink = cur;

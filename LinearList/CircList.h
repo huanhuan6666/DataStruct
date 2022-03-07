@@ -4,18 +4,21 @@
 
 #ifndef DATA_STRUCT_CIRCLIST_H
 #define DATA_STRUCT_CIRCLIST_H
+
 #include <iostream>
 
 using namespace std;
 
 template<class T>
-struct CircLinkNode{
+struct CircLinkNode {
     T data;
     CircLinkNode<T> *next;
-    CircLinkNode(CircLinkNode<T> *ptr = nullptr){
+
+    explicit CircLinkNode(CircLinkNode<T> *ptr = nullptr) {
         next = ptr;
     }
-    CircLinkNode(const T& t, CircLinkNode<T> *ptr = nullptr){
+
+    explicit CircLinkNode(const T &t, CircLinkNode<T> *ptr = nullptr) {
         data = t;
         next = ptr;
     }
@@ -23,12 +26,12 @@ struct CircLinkNode{
 
 //同样有一个附加头节点，当first指向自己时说明链表为空
 template<class T>
-class CircList{
+class CircList {
 private:
-    CircLinkNode<T> *first, *last; //头指针和尾指针
+    CircLinkNode<T> *first; //符加头结点指针
 public:
-    CircList(const T& x) {
-        first = new CircLinkNode<T>(x);
+    explicit CircList(const T &x) {
+        first = new CircLinkNode<T>;
         first->next = first; //初始化为空
     }
 
@@ -37,13 +40,18 @@ public:
     }
 
     ~CircList() {
-
+        auto cur = first->next;
+        while (cur != first) {
+            first->next = cur->next;
+            delete cur;
+            cur = first->next;
+        }
     }
 
     int Length() const {
         int size = 0;
         CircLinkNode<T> *tmp = first;
-        while(first != tmp->next){
+        while (first != tmp->next) {
             tmp = tmp->next;
             size++;
         }
@@ -64,121 +72,107 @@ public:
 
     CircLinkNode<T> *Search(T x) {
         CircLinkNode<T> *tmp = first->next;
-        while(first != tmp){
-            if(tmp->data == x){
+        while (first != tmp) {
+            if (tmp->data == x) {
                 return tmp;
             }
             tmp = tmp->next;
         }
+        cout << "cna't find in list!" << endl;
         return nullptr;
     }
 
-    CircLinkNode<T> *Locate(int i) { //实际结点下标从1开始
-        int size = 0;
-        CircLinkNode<T> *tmp = first;
-        while(first != tmp->next){
-            if(i == size){
-                return tmp;
-            }
-            tmp = tmp->next;
-            size++;
+    CircLinkNode<T> *Locate(int i) { //下标从0开始
+        if (i < 0) {
+            cout << "index is too small!" << endl;
+            return nullptr;
         }
-        if(i == size) //末尾的结点循环内部没有考虑到
-        {
+        CircLinkNode<T> *tmp = first->next;
+        for (int index = 0; tmp != first && index < i; index++) {
+            tmp = tmp->next;
+        }
+        if (tmp != first) { //找到了第i个结点
             return tmp;
         }
+        cout << "index is so big!" << endl;
         return nullptr;
     }
 
-    T* getData(int i) {
-        int size = 0;
-        CircLinkNode<T> *tmp = first;
-        while(first != tmp->next){
-            if(i == size){
-                return &(tmp->data);
-            }
+    T *getData(int i) {
+        if (i < 0) {
+            cout << "index is too small!" << endl;
+            return nullptr;
+        }
+        CircLinkNode<T> *tmp = first->next;
+        for (int index = 0; tmp != first && index < i; index++) {
             tmp = tmp->next;
-            size++;
         }
-        if(i == size){ //同样末尾的结点上面循环没有考虑到
-            return &(tmp->data);
+        if (tmp != first) { //找到了第i个结点
+            return tmp->data;
         }
-        cout << "i is so big!" << endl;
+        cout << "index is so big!" << endl;
         return nullptr;
     }
 
-    void setData(int i, T&x) {
-        int size = 0;
-        CircLinkNode<T> *tmp = first;
-        while(first != tmp->next){
-            if(i == size){
-                tmp->data = x;
-                return ;
-            }
-            tmp = tmp->next;
-            size++;
+    void setData(int i, T &x) {
+        if (i < 0) {
+            cout << "index is too small!" << endl;
+            return;
         }
-        if(i == size){ //同样末尾的结点循环没有考虑到
+        CircLinkNode<T> *tmp = first->next;
+        for (int index = 0; tmp != first && index < i; index++) {
+            tmp = tmp->next;
+        }
+        if (tmp != first) { //找到了第i个结点
             tmp->data = x;
-            return ;
+            return;
         }
         cout << "i is so big!" << endl;
-        return;
     }
 
-    bool Insert(int i, T&x) { //实际结点下标从1开始
-        if(i <= 0){
-            cout << "i is so small!" << endl;
+    bool Insert(int i, T &x) {
+        if (i <= 0) {
+            cout << "index is so small!" << endl;
             return false;
         }
         int size = 1;
-        CircLinkNode<T> *tmp = first;
-        CircLinkNode<T> *newnode = new CircLinkNode<T>(x);
-        while(first != tmp->next){
-            if(i == size){
-                newnode->next = tmp->next;
-                tmp->next = newnode;
-                return true;
-            }
+        CircLinkNode<T> *tmp = first->next;
+        for (int index = 0; tmp != first && index < i - 1; index++) {
             tmp = tmp->next;
-            size++;
         }
-        if(i == size){ //同样最后一个结点循环没有考虑到
+        if (tmp != first) { //找到了第i-1个结点
+            auto newnode = new CircLinkNode<T>(x);
             newnode->next = tmp->next;
             tmp->next = newnode;
             return true;
         }
-        cout << "i is too big!" << endl;
+        cout << "index is too big!" << endl;
         return false;
     }
 
-    bool Remove(int i, T&x) {
-        if(i <= 0){
-            cout << "i is so small!" << endl;
+    bool Remove(int i, T &x) {
+        if (i < 0) {
+            cout << "index is too small!" << endl;
             return false;
         }
-        if(IsEmpty()){
+        if (IsEmpty()) {
             cout << "list is empty!" << endl;
             return false;
         }
-        int size = 1;
-        CircLinkNode<T> *tmp = first;
-        CircLinkNode<T> *delnode;
-        while(first != tmp->next){
-            if(i == size){
-                delnode = tmp->next;
-                x = delnode->data;
-                tmp->next = delnode->next;
-                delete delnode;
-                return true;
-            }
+        CircLinkNode<T> *tmp = first->next;
+        for (int index = 0; tmp != first && index < i - 1; index++) {
             tmp = tmp->next;
-            size++;
         }
-        //最后一个结点不用考虑，因为tmp就是最后一个结点，难道要删first吗？这个不像insert那样可能插入到tmp后面，因此不用考虑
-        cout << "i is too big!" << endl;
+        if (tmp != first) { //找到了第i-1个结点
+            auto del = tmp->next;
+            tmp->next = del->next;
+            delete del;
+            return true;
+        }
+        cout << "index is too big!" << endl;
         return false;
     }
 
 };
+
 #endif //DATA_STRUCT_CIRCLIST_H
