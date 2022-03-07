@@ -31,7 +31,7 @@ private:
     CircLinkNode<T> *first; //符加头结点指针
 public:
     explicit CircList(const T &x) {
-        first = new CircLinkNode<T>;
+        first = new CircLinkNode<T>(x);
         first->next = first; //初始化为空
     }
 
@@ -131,23 +131,19 @@ public:
     }
 
     bool Insert(int i, T &x) {
-        if (i <= 0) {
+        if (i < 0) {
             cout << "index is so small!" << endl;
             return false;
         }
-        int size = 1;
-        CircLinkNode<T> *tmp = first->next;
-        for (int index = 0; tmp != first && index < i - 1; index++) {
+        CircLinkNode<T> *tmp = first;
+        for (int index = 0; index < i; index++) {
             tmp = tmp->next;
         }
-        if (tmp != first) { //找到了第i-1个结点
-            auto newnode = new CircLinkNode<T>(x);
-            newnode->next = tmp->next;
-            tmp->next = newnode;
-            return true;
-        }
-        cout << "index is too big!" << endl;
-        return false;
+        //找到了第i-1个结点
+        auto newnode = new CircLinkNode<T>(x);
+        newnode->next = tmp->next;
+        tmp->next = newnode;
+        return true;
     }
 
     bool Remove(int i, T &x) {
@@ -165,6 +161,7 @@ public:
         }
         if (tmp != first) { //找到了第i-1个结点
             auto del = tmp->next;
+            x = tmp->data;
             tmp->next = del->next;
             delete del;
             return true;
