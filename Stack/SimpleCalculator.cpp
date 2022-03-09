@@ -3,7 +3,7 @@
 //
 
 #include <iostream>
-#include "Stack/LinkedStack.h"
+#include "LinkedStack.h"
 
 using namespace std;
 
