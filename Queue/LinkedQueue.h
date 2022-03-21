@@ -32,6 +32,10 @@ public:
 
     bool push(const T&x) {
         auto newnode = new QueueNode<T>(x);
+        if(tail == nullptr){
+            tail = head = newnode;
+            return true;
+        }
         tail->next = newnode;
         tail = newnode;
         return true;

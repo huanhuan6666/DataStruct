@@ -24,6 +24,7 @@ class LinkedStack{
             cout << "the " << index << " element is " << cur->data << endl;
             cur = cur->next;
         }
+        return out;
     }
 private:
     StackNode<T> *top; //栈顶指针
