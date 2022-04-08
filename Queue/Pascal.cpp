@@ -26,4 +26,5 @@ int main(){
             cout << first << ' ';
         mq.push(first + second);
     }
+    return 0;
 }
