@@ -463,7 +463,7 @@ struct node{
 ```
 
 当然也祭出了**静态链表**表示法，hh有链表的地方就考虑用静态大小的数组结构表示一下，虽然我从来没用过就是说🤣直接看图吧， `data`就是固定大小为6的数组，存储所有6个树结点：
-<img alt="img_2.png" height="200" src="E:\BaiduNetdiskDownload\CC++\data_struct\picture\img_2.png" width="255"/>
+<img alt="img_2.png" height="200" src="./picture/img_2.png" width="255"/>
 
 ### 一些算法
 
