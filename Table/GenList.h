@@ -32,11 +32,13 @@ class GenList{
         auto p = l.head->next; //p是Create后唯一的结点 把整个表看作了子表
         l.head = p->info.son;
         delete p;
+        return in;
     }
     friend ostream&operator<<(ostream& out, GenList<T>& l){
         out << '(';
         l.Display(out, l.head);
         out << ')';
+        return out;
     }
 private:
     GenListNode<T> *head; //附加的表头结点 类型为0

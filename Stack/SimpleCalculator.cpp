@@ -102,7 +102,7 @@ public:
     }
 };
 
-int main() {
+int main3() {
     string exp;
     cout << "cin your expression: ";
     cin >> exp;

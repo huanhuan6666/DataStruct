@@ -6,7 +6,7 @@
 
 using namespace std;
 
-int main(){
+int main1(){
     int first = 0, second = 0;
     LinkedQueue<int> mq;
     mq.push(0);
