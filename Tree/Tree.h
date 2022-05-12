@@ -42,6 +42,15 @@ public:
     bool Parent();
     //寻找值为value的结点并置为当前结点
     bool Find(T value);
+
+    // 建立根 返回新结点的指针
+    TreeNode<T> *BulitRoot(T data);
+    // 给结点subT插入新的兄弟data 返回新结点的指针
+    TreeNode<T> *InsertRightSibling(TreeNode<T>* subT, T data);
+    // 给subT插入新的子女data 返回新结点的指针
+    TreeNode<T> *InsertLeftChild(TreeNode<T>* subT, T data);
+
+
     //先根次序遍历
     void RootFirstOrder() { RootFirstOrder(root); }
     //后根次序遍历
@@ -178,6 +187,36 @@ void Tree<T>::LevelOrder(TreeNode<T> *r) {
             son = son->nextSibling;
         }
     }
+}
+
+//给本森林建立根节点
+template<class T>
+TreeNode<T> *Tree<T>::BulitRoot(T data) {
+    auto new_node = new TreeNode<T>(data);
+    root = new_node;
+    return root;
+}
+
+//给subT插入新的兄弟data 返回新兄第结点
+template<class T>
+TreeNode<T> *Tree<T>::InsertRightSibling(TreeNode<T> *subT, T data) {
+    auto new_node = new TreeNode<T>(data);
+    auto tmp = subT;
+    while(tmp->nextSibling) //指向兄弟链表的末尾
+        tmp = tmp->nextSibling;
+    tmp->nextSibling = new_node;
+    return new_node;
+}
+
+//给subT插入新的子女data 返回新子女结点
+template<class T>
+TreeNode<T> *Tree<T>::InsertLeftChild(TreeNode<T> *subT, T data) {
+    auto new_node = new TreeNode<T>(data);
+    auto tmp = subT;
+    while(tmp->firstChd) //指向子女链表的末尾
+        tmp = tmp->firstChd;
+    tmp->firstChd = new_node;
+    return new_node;
 }
 
 
