@@ -432,6 +432,9 @@ Prim算法实际上可以有更普遍的解释，即MCE(`Minimum-weight Cut-cros
 
 
 ## 最短路径
+这部分可以结合文章[带权最短路 Dijkstra, SPFA, Bellman-Ford, ASP, Floyd-Warshall 算法分析](https://www.renfei.org/blog/weighted-shortest-path.html) 来看
+
+> 我觉得总结的比我好多了就是说😭
 
 ### Dijkstra算法
 #### @权值非负的单源最短路径
