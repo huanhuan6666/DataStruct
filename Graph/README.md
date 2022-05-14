@@ -255,11 +255,500 @@ void DFS_tree_new(Graph<T, W>& G, Tree<T>& forest, TreeNode<T>* subTree, int v, 
 
 ## 最小生成树
 
+上面所说的深度优先生成树，只涉及拓扑结构，**没有涉及边的权值**。这里我们讲的最小生成树，是要考虑边的权值的。
+
+即在n个顶点的连通图上，**找n-1条边**将n个点连通。连通的过程可以看作**合并等价类**的过程，可以利用**并查集**判断两个点是否已经连通。
+
+
 ### Kruskal算法
+
+#### 全局贪心
+
+**并查集和最小堆的应用**就是说🤭
+
+最最简单的方法，要想生成树**边的权值和**最小，那么每次都找**当前最短的边**加到生成树里不就完了。
+
+使用最小堆和并查集，最小堆用来找**当前权值最小的边**，并查集用来判断这个边**是否会形成环**，如果边的两个顶点的`Find`值一样则说明这两个点已经连通了，这个边就不能加了。
+
+大致代码如下，在`MinSpanTree.h`文件中：
+```cpp
+void Kruskal(Graph<T, W>& G, MinSpanTree<W>& MST) {
+    MinHeap<MSTEdge<W>> heap(e_count);  //边的最小堆
+    UFSet ufset(v_count);   //并查集 看顶点是否连通 大小即为v_count
+    
+    for(int i = 0; i < v_count; i++) { //由于无向图邻接矩阵对称 只看一般就行
+        for(int j = i + 1; j < v_count; j++) {
+            //把每条边都加入最小堆中...        
+            heap.Insert(each_edge); //最小堆中插入边
+        }
+    }
+    int count = 0; //边数统计
+    while(count < v_count-1) { //要加入n-1条边
+        heap.Remove(each_edge); //取出当前最小边
+        int begin = each_edge.begin;
+        int end = each_edge.end;
+        if(ufset.Find(begin) != ufset.Find(end)) { //这条边加到生成树不会成环
+            ufset.Union(begin, end);  //连起来
+            MST.InsertEdge(each_edge);
+            count += 1;
+        }
+    }
+}
+```
+
+#### 正确性和复杂性
+
+* Kruskal算法实际上是**全局的贪心策略**，每次都找**当前整个图所有边中**的最小边，这样当然结果是正确的。
+* 复杂性
+
+由于我们使用的是**邻接矩阵**，假设有n个点，e条边。遍历邻接矩阵得到所有的边代价为`O(n^2)`（虽然我们只遍历了矩阵的一半。。）
+
+然后插入最小堆中，总共e次代价为`O(eloge)`。构建完毕，需要把e条边从堆中选n-1条，最坏情况下e条都被取出则代价还是`O(eloge)`。
+
+每取出一条边，进行2次`Find`操作，则`O(2elogn)`，进行`n-1`次`Union`操作，代价为`O(n)`
+> 并查集规模和点的规模一样，因为这是用来判断**点的连通性**，也就是点是否属于同一个等价类。
+> 
+> `Union`的代价为`O(1)`，`Find`的代价为`O(logn)`这个书上只说了一下，没给具体证明😥
+
+则一共的代价为 `O(n^2 + eloge + eloge + 2elogn + n)`，化简得`O(n^2+eloge)`
+> 要知道e的规模一半比n大的，也就是说`eloge > elogn`。
+
+#### 非得用并查集？
+下面的Prim算法和Dijkstra我们都直到，是BestFS框架，可以用一个`vector<bool>`来区分顶点是否加入MST中。那这里的Kruskal算法可不可以也用`vector<bool>`来区分？
+
+答案是不可以，Kruskal算法不是BestFS框架，BestFS框架**保证**当前的`Seen`顶点是**连通图**，而Kruskal算法则没有这个保证，因此必须通过并查集来检查边的两个端点是否连通。
+
 
 ### Prim算法
 
+#### 局部贪心策略
+既然是从小到大生成的，也就是**迭代进行**的。首先引入概念：
+* 图的**割(cut)**：对于给定带权图，点集为V，将其分成两个**没有交集**的点集V1, V2, 满足`V1 ∩ V2 = 空`且`V1 ∪ V2 = V`，则称V1和V2是图的一个割
+* 割**之间的桥**：由于我们**只考虑连通图**，那么对于连通图上**任意一个割**V1和V2，V1和V2之间**必定有边相连**，我们称连接V1和V2的**那些边**为**桥**
+> **连通图**的割之间**必定有桥**，否则图就不连通了🤭
+
+Prim算法就是根据这个特点，算法过程中把连通图G分成割MST和V-MST，初始时MST**只有一个**顶点，因此算法的过程就是不断将V-MST里的点放到MST的过程。
+
+由于连通图割之间必定有桥，假设**这些桥**为`(u, v)`，则必有`u∈MST, v∈(V-MST)`，即**桥的两个端点来自不同的点集**。
+
+为了得到最小生成树，**贪心策略**就体现在**每次选择最短的那个桥(u, v)**，将v加入MST，V-MST则去掉v，并且**更新桥边集合**。
+
+#### 实现
+经过分析我们可以看出来，Prim算法的主要工作就在于维护**桥边的最小堆**，和Kruskal算法不同，Kruskal算法维护的是全局**所有边的最小堆**。
+
+以及**维护两个点集**MST和V-MST作为**图的割**，
+
+代码如下，在`MinSpanTree.h`文件中：
+```cpp
+void Prim(Graph<T, W>& G, MinSpanTree<W>& MST, const T& begin_vertex) {
+    int new_node = G.getVertexPos(begin_vertex); //MST初始顶点
+
+    vector<bool> VertexInMst(v_count, false);   //判断点是否在MST中
+    VertexInMst[new_node] = true;   //初始第一个点
+
+    MinHeap<MSTEdge<W>> heap(e_count);  //边的最小堆
+    MSTEdge<W> each_edge;   //每条桥
+    
+    for(int i = 0; i < v_count-1; i++) { //向MST中再加入n-1个点即可
+        // 将新加入MST的结点的所有桥加入最小堆中
+        int neighbor = G.getFirstNeighbor(new_node);
+        while(neighbor != -1) {
+            if(!VertexInMst[neighbor]) { //(new_node, neighbor)是桥
+                each_edge.begin = new_node;
+                each_edge.end = neighbor;
+                each_edge.weight = G.getWeight(new_node, neighbor);
+                heap.Insert(each_edge); //将桥加入最小堆中
+            }
+            neighbor = G.getNextNeighbor(new_node, neighbor);  //找下一个桥
+        }
+        while(!heap.IsEmpty()) {
+            heap.Remove(each_edge); //取最小的桥加入MST中
+            new_node = each_edge.end;   //边的终点
+            if(!VertexInMst[new_node]) {   //确保终点不在MST中
+                MST.InsertEdge(each_edge);
+                VertexInMst[new_node] = true;
+                break;
+            }
+        }
+    }
+}
+```
+**注意！！！**：
+* 模拟割
+
+我们通过 `vector<bool> VertexInMst`来**模拟割**，`true`则说明在点集MST中，`false`则在点集V-MST中。
+
+* 找最小的桥
+
+代码中维护了一个 `heap`，注意我们是先将MST中的新结点的所有桥，即终点为`VertexInMst[neighbor] == false`的边。
+
+而取出堆顶即最小的桥将终点 `VertexInMst[end]`设置为`ture`，这是有可能导致堆中的部分桥的终点`VertexInMst[end]`变成`true`的。
+> **切记**我们堆中所有的边都是 `VertexInMst[begin] = true`且 `VertexInMst[end] = false`的，**这样的边才叫桥！！！**
+> 
+> 因此是**有可能**出视上面所说的情况，也就是堆中的边可能由于一条`VertexInMst[end]`设置为`ture`就**不再是桥了**
+
+因此需要加一个判断 `if(!VertexInMst[new_node])`，并且在找到**真正的最小的桥**后加入MST中，再`break`跳出。
+
+#### 正确性和复杂性
+
+最直接的一个问题：Kruskal算法我们使用了**并查集**来防止新加入的边**出现回路**，Prim算法如何保证不出现回路？
+
+这是**割和桥的属性**保证的，每个桥**保证**一个端点来自MST，另一个端点来自V-MST，**两个点集没有交集**，那么加入这条桥就不可能出现回路。
+> 事实上Kruskal算法判断出现回路也是**利用并查集**看一条边的两个端点是否都在一个连通分量中，如出一辙
+
+**复杂度**:
+
+假设图中有n个顶点，e条边。最小堆中放的是桥，我们姑且认为**最坏情况下**堆的规模为`O(e)`
+
+迭代n次，每次迭代**平均**将`e/n`条边加入最小堆中，因此加入堆代价为`O(n*e/n*loge) = O(eloge)`，一共**至少取**(n-1)次堆顶，代价为`O(nloge)`
+> 实际上**取堆顶**的次数很可能大于n-1次，正如之前所说，**堆顶可能已经不是桥了**
+
+因此总的代价为`O(eloge)`
+
+#### 简单比较
+Kruskal算法是对于图中**所有的边**进行**全局范围**内的贪心。而真正意义上的贪心是通过**每次找局部最优解**最终获取**全局最优解**，这就是Prim的工作。
+
+Prim算法是从**一个起点开始**不断加入新的顶点和对应边，最终**生成**MST。
+> 所以我还是觉得Prim算法才有**“生成”**内味了🤭生成嘛，从小到大一点点长大才叫**“生成”**。
+>
+> Kruskal算法是**关注边**的，而Prim算法是**关注点**的，点才是图最基本的元素嘛😋
+
+并且，Prim算法可以保证在算法的**任意时刻**，生成的MST**都是连通的**；而Kruskal算法由于是在全局找边加入MST，在算法的某个时刻很可能MST是**好几个连通分量**的样子。
+
+* 适用范围
+
+Kruskal算法适用于**边稀疏**的网络，因为要建立维护**所有边的最小堆**；Prim算法适合**边稠密**的网络，只需维护某一时刻下**所有桥的最小堆**
+> 事实上我感觉Prim算法任何场景下都适用的；相反Kruskal算法思路简单，稠密图下堆的规模就过大了🙃
+
+### 最小生成树的MCE贪心框架
+
+Prim算法实际上可以有更普遍的解释，即MCE(`Minimum-weight Cut-crossing Edge`)框架，即**跨越割的最小权值边**，也就是割之间**最短的桥**。
+
+引入MCE的目的是因为其与MST的**本质关联**：*对某条边e，如果存在一个割使得e成为**该割的MCE**，那么e**必然属于**某一棵MST*
+> 可以用**反证法**证明，在黄宇算法书的P121有证明
+
+* MCE角度下的Prim算法：Prim算法每次选择一条MCE（切的一边是已有的点，另一边是剩下的点）
+* MCE角度下的Kruskal算法：每次选择一条MCE，将权值更小的避开，使其位于某个点集内部，也就是说**根据选择出的边来创建割**
+
 
 ## 最短路径
+
+### Dijkstra算法
+#### @权值非负的单源最短路径
+
+Prim算法和Dijkstra均为`Best-Frist Search`下的产物，只不过贪心策略和贪心指标的更新方式不同
+
+#### BestFS贪心遍历框架/贪心搜索
+
+> 灵感来自于BFS🙃，在BFS基础上对于下一层候选结点的选择加入了**贪心指标**，大道至简我只能说😥
+
+可以看出来Prim和Dijkstra算法的特点很像，都是从**给定单源**出发，最终**遍历到整张图**所有结点。
+
+和**广度优先遍历类似**，算法通过和这个点关联的所有边，将其所有邻居结点添加到`Fringe`**候选结点集合**中。
+> 某一时刻下图中的点分成三个部分：`Seen`，`Fringe`和`Unseen`。其中`Seen`也就是Prim算法的MST部分，`Fringe`和`Unseen`都属于V-MST。
+
+贪心策略体现在从`Fringe`候选结点集合中**选择出最优的**那一个，加入到`Seen`表示已经完成，也就是Prim中的MST集合，Dijkstra中的Seen
+> 而BFS则根本不选，直接把所有候选结点都加入队列，这就是区别
+
+**BestFS算法推进的策略和广度优先遍历类似**：BFS是通过队列来调度遍历，`Fringe`都加入到队列中先入先出；而BestFS则需要自定义**优先队列**和**贪心指标**，每次先遍历**最优候选结点**。
+
+并且从优先队列取出最优候选点后，需要更新`Fringe`和`Unseen`的贪心指标，比如Dijkstra中的`min(..,..)`
+> 这部分在黄宇P126有详细介绍，我只能说逐渐李姐这一切😭
+
+
+
+区别在于Dijkstra每次有新的点`new_seen`加入到`Seen`后更新其余点**贪心指标**时，需要`dist[i] = min(dist[i], dist[new_seen] + weight(new_seen, i))`计算出来。
+
+而Prim算法更新`Fringe`优先度则很简单，因为**优先度就是边的长度**，只用将新的候选点加入最小堆就好了
+> 而Dijkstra为了正确找到最短路径，必须不断更新`dist[fringe]`
+> 
+> 注意`Fringe`甚至可以不用显式表示出来，Prim算法某一刻下的`Fringe`就是当前**桥堆中那些边的终点**，就算不用堆我们遍历也可以，只是性能较差。
+> 
+> 我们实现的Dijkstra就没有显式表示`Fringe`
+
+#### 实现
+
+同样用`vector<bool> Seen`数组来表示**割**，在`Seen`数组中的点表示**已经确定最短路径**了。
+
+优先度用`vector<int> dist`表示，也就是**到源点的距离**。
+
+初始时，给定一个源点加入`Seen`数组，然后不断迭代；每次找`dist`最小的那个点加入`Seen`中试图以它为中间点更新其余的`dist = min(..,..)`
+
+我们这里实现没有用最小堆来维护`Fringe`，而是遍历所有的`Fringe`找最小`dist`的那个，因为`dist`是原地修改的，堆不太好维护。
+> 要知道的是堆的目的只是快速找出最优的那个`Fringe`（也就是堆顶）
+
+代码如下：
+```cpp
+void Dijkstra(Graph<T, W>& G, const T& begin_vertex, vector<W>& dist, vector<int>& path) {
+    int n = G.getNumVertexs();
+    int source = G.getVertexPos(begin_vertex); //源点
+
+    //1.初始化dist和Seen
+    dist.resize(n);
+    for(int i = 0; i < n; i++) { //初始距离
+        dist[i] = G.getWeight(source, i);
+        if(dist[i] < maxValue) {
+            path[i] = source;   //路径的上一步
+        }
+    }
+    vector<bool> Seen(n, false);   //判断点是否在MST中
+    Seen[source] = true;   //初始第一个点
+    dist[source] = 0;
+
+    //2.开始迭代n-1次 即将剩余的n-1个点加入到Seen
+    for(int i = 0; i < n - 1; i++) { //再向Seen中加入n-1个点即可
+        int weight = maxValue, best_fringe = -1;
+        for(int j = 0; j < n; j++) { //寻找最优的Fringe
+            if(!Seen[j] && dist[j] < weight) {
+                weight = dist[j];
+                best_fringe = j;
+            }
+        }
+        if(best_fringe != -1) { //将最优的Fringe加入到Seen中
+            Seen[best_fringe] = true;
+            int neighbor = G.getFirstNeighbor(best_fringe);
+            while (neighbor != -1) { // 更新邻居的dist和path
+                if(!Seen[neighbor] &&
+                    dist[best_fringe] + G.getWeight(best_fringe, neighbor) < dist[neighbor]) {
+                    dist[neighbor] = dist[best_fringe] + G.getWeight(best_fringe, neighbor);
+                    path[neighbor] = best_fringe;
+                }
+                neighbor = G.getNextNeighbor(best_fringe, neighbor);
+            }
+        }
+    }
+}
+```
+
+步骤如下：
+* 初始化 `dist`，`path`和`Seen`
+* 迭代n-1次，每次迭代时寻找**最优的**(`dist`最短的)候选点加入`Seen`，并且更新这个点的邻居的`dist`和`path`
+> 如果要优化的话，只能在每次**寻找最优候选点**的时候，可以用堆来优化，我这里直接遍历的😥
+
+#### 复杂度
+这里给一个BestFS的统一复杂度表示:
+`O(n*C(GET_BEST) + n*C(INSERT) + e*C(UPDATE))`
+其中`C(GET_BEST)`为找出最优`Fringe`的代价，`C(INSERT)`为插入优先队列的代价，`C(UPDATE)`为更新队列中点的优先度的调整代价
+
+
+### Bellman-Ford算法
+#### @任意权值的单源最短路径
+Dijkstra的局限性很明显，只能计算权值非负的情况，因为它的贪心策略每次选择最优的`Fringe`时，正是**基于所有边非负**的前提才保证该`Fringe`得到的路径最短。
+
+比如下面这种情况：
+
+<img alt="img.png" src="../picture/img_18.png" width="200" height="80"/>
+
+用Dijkstra算法找到从0到2的最短路径为5，但实际上`0->1->2`才是最短路径。因为在选择`Fringe`时Dijkstra看不到后续可能出现的**负权边**，BestFS框架决定了迭代时**只能**看到`Seen`的邻居。
+
+那么如何考虑上这些**负权边**？Bellman-Ford给出了一种很暴力的思路：要求从原点s到某个顶点v的最短路径，**最短路径的边数最少为1，最多为n-1**，那我干脆尝试**所有**可能的路径，找最短的那一条。但是就算暴力也要讲究点策略，这就是**动态规划**。
+
+#### 动态规划：用路径中边的条数刻画问题规模
+
+Bellman-Ford的核心就在于把求解最短路径这个问题用**路径中边的条数来刻画规模**，也就是下面`distk`中的**k**。
+
+构造一个最短路径长度数组序列 dist1[u], dist2[u], …, distn-1[u]。其中，
+* dist1 [u]是从源点v到终点u的**只经过一条边**的最短路径的长度，即dist1 [u] = Edge[v][u]
+* dist2 [u]是从源点v出发**最多经过两条边**到达终点u的最短路径长度;
+* dist n-1[u]是从源点v出发**最多经过**不构成带负长度边回路的n-1条边到达终点u的最短路径长度。
+
+这样一来，求最短路径的问题就变成了解决**规模为n-1**的问题，即求出`dist n-1[u]`
+
+显然这是合理的，两点之间边数不超过n-1的所有路径中最短的那一条，一定就是实际的最短路径。
+> 我们找的路径都是无重复结点的*简单路径*，所以有n个结点的图中任意两点间路径撑破天就是n-1条了😄，条数不超过n-1的所有路径中最短的那个，不就是两点之间**所有可能的路径中最短**的吗
+> 
+> 可以说是非常的暴力了😋但这就是动归
+
+求解规模k的问题`distk [u]`的**递推公式**如下：
+```
+dist1 [u] = Edge[v][u] //初始时dist1[u]就是图的边
+distk [u] = min { distk-1 [u],  min { distk-1 [j]+Edge[j][u] } } //根据选or不选第k条边划分子问题
+```
+欲解决规模为k的问题`distk [u]`，子问题划分时：
+* 如果没有选择第k条边，则规模直接退化成k-1，即`distk-1 [j]`
+* 如果选择k条边，可以确定的是想要到达u，**必定经过**可到达u的边`(j, u)`，这样规模k就减小了，求出 `min { distk-1 [j]+Edge[j][u]}`
+> 问题规模是**k**来刻画的，由于动归思想，保证了求`distk`时`distk-1`规模的所有问题都被解决了
+
+
+算法过程如下：
+
+<img alt="img.png" src="../picture/img_19.png" width="467" height="339"/>
+
+#### 实现
+动归写起来就是**数学归纳法**的步骤，确定**归纳起点**后剩下就是迭代。
+
+```cpp
+void Bellman_Ford(Graph<T, W>& G, const T& begin_vertex, vector<W>& dist, vector<int>& path) {
+    int n = G.getNumVertexs();
+    int source = G.getVertexPos(begin_vertex);
+
+    //初始化规模为1的问题 即dist1[u]
+    dist.resize(n, INT32_MAX);
+    path.resize(n, -1);
+    int neighbor = G.getFirstNeighbor(source);
+    while(neighbor != -1) { //如果有直接到达source的边则更新一下
+        dist[neighbor] = G.getWeight(source, neighbor);
+        path[neighbor] = source;
+        neighbor = G.getNextNeighbor(source, neighbor);
+    }
+    dist[source] = 0; //source到自己距离为0
+
+    //迭代n-2次 最终求出dist n-1[u]规模为n-1的问题
+    for(int size = 0; size < n-2; size++) 
+        for(int i = 0; i < n; i++) //求更大规模的dist[i]
+            if (i != source) {
+                for (int j = 0; j < n; j++) { //遍历所有从j到i的边 找出最小
+                    int edge = G.getWeight(j, i);
+                    if (i != j && edge != INT32_MAX) { //存在从j到i的边
+                        if (dist[j] + edge < dist[i]) { //更小
+                            dist[i] = dist[j] + edge;
+                            path[i] = j;
+                        }
+                    }
+                }
+            }
+}
+```
+上面代码很清楚：先初始化规模为1的问题，之后迭代`n-2`次得到规模为`n-1`的问题结果就是最终答案
+
+
+
+#### 复杂度分析
+显然，如果使用邻接矩阵的话，三层循环，复杂度为`O(n^3)`
+
+但事实上，内层的两个嵌套`for`循环可以优化成一个**对于边的遍历**。在我们原来的实现中，求`dist[i]`的时候很蠢地遍历了`O(n)`来找所有的边。
+
+实际上我们**大可不必**一个个`dist[i]`去更新，还傻乎乎找i关联的那些边，这是由于**邻接矩阵的局限性**导致不得不这样做。
+
+更标准的Bellman-Fordsuanfa算法：
+```cpp
+bool Bellman_Ford(int s)
+{
+    for (int i=0; i<num_nodes; ++i)
+        d[i] = __inf;
+
+    d[s] = 0;
+    for (int i=0; i<num_nodes; ++i) {
+        bool changed = false; //如果某次循环没有更新操作发生，以后也不会有了。我们可以就此结束程序，避免无效的计算。
+        for (int e=0; e<num_edges; ++e) {
+            if (d[edges[e].to] > d[edges[e].from] + edges[e].weight 
+               && d[edges[e].from] != __inf) {
+                d[edges[e].to] = d[edges[e].from] + edges[e].weight;
+                p[edges[e].to] = e;
+                changed = true;
+            }
+        }
+        if (!changed) return true;
+        if (i == num_nodes && changed) return false;
+    }
+    return false; // 程序应该永远不会执行到这里
+}
+```
+可以看到，遍历所有的边来进行`distk [u] = min { distk-1 [u],  min { distk-1 [j]+Edge[j][u] } }`的更新，反客为主属于是🤭
+
+这样一来Bellman-Floyd就清晰简单好多了，复杂度为 `O(ne)`，e为**边的数目**。
+
+
+### Floyd-Warshall算法
+#### @所有顶点之间的最短路径
+如果我们想**一次性**求图中**任意两点之间**的最短路径呢？这就是Floyd-Warshall算法解决的问题。
+
+显然结果是一个**二维数组**，记录任意两点之间的最短路径。如何解决这个问题？同样是**动归**
+
+#### 动态规划：用路径中的中继节点的范围刻画问题规模
+
+Floyd-Warshall对于问题的刻画比Bellman-Ford更高明一点，在有n个顶点的图上求两点之间的最短路径，Bellman-Ford是基于路径上边的条数不超过n-1，用**路径上边的条数**来刻画问题规模的。
+
+而Floyd-Warshall算法角度就很清奇了，它是用**路径上的中继节点来刻画问题规模**的。从A点到B点，这中间会有**中继节点**，Floyd将顶点分类成如下**区间簇**：
+```cpp
+I0 = 空
+I1 = {v1};
+I2 = {v1, v2};
+In = {v1, v2, v3..., vn};
+```
+显然有`I0 ∈ I1 ∈ I2 ... ∈ In`，并且相邻两个`I(k-1)`和`Ik`**只差一个**顶点`vk`。
+
+定义子问题：`d(i, j, k)`表示点i和点j中**只用区间簇Ik中的点作为中继节点**的最短路径。
+
+那么求解任意两点的最短路径问题就变成了求解**问题规模为n**的大问题`d(i, j, n)`，如何解决这个大问题？递推公式如下：
+
+* 显然初始时`d(i, j, 0) = edge(i, j)`
+* `d(i, j, k) = min{d(i, j, k-1), d(i, k, k-1)+d(k, j, k-1)}`
+
+欲解决规模为k的问题`d(i, j, k)`，子问题划分为：
+* 如果路径中没有使用点`vk`，则问题规模直接退化成`d(i, j, k-1)`
+* 如果路径中用到了`vk`，那么计算这条路径长度可以分成两个部分:从`(i--->k)`和从`(k--->j)`，也就是在`vk`处分成两段，这两段规模显然为`I(k-1)`
+
+> 之所以如此巧妙分类是因为Floyd的**区间簇**划分地就非常巧妙， `Ik`和`I(k-1)`**只差一个**点`vk`，那么解决规模为k的问题时，完全可以按照**是否使用了点`vk`作为依据**
+> 
+> 选or不选，一举就把问题分成了规模为`k-1`的**两个子问题**
+
+#### 实现
+同样是数学归纳法的步骤，**初始化**`dist[i][j] = edge[i][j]`之后，相等于解决了规模为0的问题`I0`(没有任何中继节点)，要**迭代n次**得到最终`d(i, j, n)`的结果。
+
+代码如下：
+```cpp
+void Floyd_Warshall(Graph<T, W>& G, vector<vector<W>>& dist, vector<vector<int>>& path) {
+    int n = G.getNumVertexs();
+    dist.resize(n);
+    //初始化问题 即不经过任何中间结点的结果
+    for(int i = 0; i < n; i++) {
+        dist[i].resize(n);
+        for(int j = 0; j < n; j++) {
+            dist[i][j] = G.getWeight(i, j);
+            if(i != j && dist[i][j] != INT32_MAX) {
+                path[i][j] = i;
+            }
+            else
+                path[i][j] = -1;
+        }
+    }
+    //迭代n次 k表示使用Ik区间簇作为中继节点
+    for(int k = 0; k < n; k++) { //点的下标是从0开始的 最终的区间簇为(v0, v2...vn-1)
+        for(int i = 0; i < n; i++)
+            for(int j = 0; j < n; j++) {
+                if(dist[i][j] > dist[i][k]+dist[k][j]) { //经过点k的路径更短
+                    dist[i][j] = dist[i][k] + dist[k][j];
+                    path[i][j] = path[k][j];    //更新path
+                }
+            }
+
+}
+```
+注意实际写代码时，点的下标从0开始，因此初始化空区间簇应该叫`I(-1)`才合适，`I0 = (v0)`，最终结果的区间簇为整个点集即`I(n-1) = (v0, v1...vn-1)`也就是**迭代n次**
+
+#### 复杂度
+显然三层循环，代价为`O(n^3)`。这玩意可是实打实的`O(n^3)`，就是迭代**更新n次`n*n`的矩阵**。
+
+#### 思考比较
+
+之前的Bellman-Ford复杂度为`O(ne)`，**只能算出单源**最短路径
+> 但由于一般我们都用邻接矩阵来实现Bellman-Ford导致复杂度变成了`O(n^3)`，因为没办法直接遍历边
+
+能看出来二者都用到了动归，解决方法上很像，都是初始化后不断迭代，但Floyd凭什么就能算出任意两点的最短路径？
+
+这就是因为Floyd刻画问题规模的方式比Bellman要**高明**，我们看递推式：
+
+Bellman-Ford的递推式：
+```
+dist1 [u] = Edge[v][u] //初始时dist1[u]就是图的边
+distk [u] = min { distk-1 [u],  min { distk-1 [j]+Edge[j][u] } } //根据选or不选第k条边划分子问题
+```
+注意到Bellman根据路径上边的条数划分子问题，没有使用k条边的话问题直接退化。
+
+用了第k条边的话，则把边截成**前k-1条和最后的一条**，**关注最后一条**边，这样就可以通过**遍历所有边**来更新了。
+
+
+Floyd-Warshall的递推式：
+```
+d(i, j, 0) = edge(i, j)
+d(i, j, k) = min{d(i, j, k-1), d(i, k, k-1)+d(k, j, k-1)}
+```
+子问题划分时，要么选`vk`要么不选，不管选还是不选，**子问题都可以一步解决**，不像Bellman-Ford那样有个子问题还难以求解。
+
+正是由于Floyd的**中继节点区间簇**刻画问题规模，才有了这样优越的表现。当然它的复杂度也提升了，变成了`O(n^3)`
+> 不过就一般实现来看，我们写的Bellman-Ford由于邻接矩阵的拙劣实现复杂度也退化成`O(n^3)`了😅
+
+而且动态规划好像就是Bellman这个人提出来的，祖师爷了属于是🙃
 
 ## 活动网络

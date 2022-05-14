@@ -4,7 +4,6 @@
 
 #ifndef DATA_STRUCT_UFSETS_H
 #define DATA_STRUCT_UFSETS_H
-template<class T>
 class UFSet {
     int* parent; //著名的 父指针数组 就是int类型 因为都是下标
     int size;
@@ -28,8 +27,7 @@ public:
 };
 
 //合并x1和x2所在的集合
-template<class T>
-void UFSet<T>::Union(int x1, int x2) {
+void UFSet::Union(int x1, int x2) {
     int p1 = Find(x1), p2 = Find(x2);
     if(p1 == p2) { //本来就在一个集合中 无需合并
         return ;
@@ -45,8 +43,7 @@ void UFSet<T>::Union(int x1, int x2) {
 }
 
 //查找x所在集合的根结点 并且进行路径压缩
-template<class T>
-int UFSet<T>::Find(int x) {
+int UFSet::Find(int x) {
     int root = x;
     for(; parent[root] >= 0; root = parent[root]) ; //跳出循环后 j就是x的根节点下标
     while(x != root) { //压缩从x到根j路径上的所有结点temp 使其直接指向根
