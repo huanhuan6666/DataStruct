@@ -78,5 +78,8 @@
 * 图的DFS和BFS，以及DFS生成树/森林，寻找关节点
 * 最小生成树：Kruskal(*全局贪心*)，Prim(*BestFS*)；贪心搜索框架BestFS
 * 最短路径：Dijkstra(*BestFS*)，Bellman-Ford(*dp*)和Floyd-Warshall(*dp*)算法；动态规划思想
+* 活动网络：
+  * 顶点表示活动(AOV)：模拟法/DFS法求拓扑排序，模拟法判断有向环
+  * 边表示活动(AOE)：拓扑排序+时间余量求**给定两点**间关键(最长)路径；Bellman求最长路径的思考
 
 位于目录 `Graph/`中
